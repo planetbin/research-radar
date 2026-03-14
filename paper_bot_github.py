@@ -327,26 +327,28 @@ def main():
         papers = list({p["id"]: p for p in papers}.values())
         new_papers = save_papers(papers)
 
-    if not new_papers:
-        print("今天没有新论文")
-        return
-
     report = "心理学研究雷达（过去24小时）\n\n"
 
-    for p in new_papers:
+    if not new_papers:
 
-        summary = summarize_paper(p["title"], p["abstract"])
+        report += "今天没有发现新的论文。\n\n"
 
-        report += f"论文：{p['title']}\n\n"
-        report += summary + "\n\n"
+    else:
 
-        if p["source"] == "pubmed":
-            link = f"https://pubmed.ncbi.nlm.nih.gov/{p['id']}"
-        else:
-            link = p["id"]
+        for p in new_papers:
 
-        report += f"原文链接：{link}\n"
-        report += "\n------------------------\n\n"
+            summary = summarize_paper(p["title"], p["abstract"])
+
+            report += f"论文：{p['title']}\n\n"
+            report += summary + "\n\n"
+
+            if p["source"] == "pubmed":
+                link = f"https://pubmed.ncbi.nlm.nih.gov/{p['id']}"
+            else:
+                link = p["id"]
+
+            report += f"原文链接：{link}\n"
+            report += "\n------------------------\n\n"
 
     trend_file = trend_analysis()
 
