@@ -75,8 +75,11 @@ jobs:
         run: |
           # 获取上一次提交时间戳
           LAST_COMMIT=$(git log -1 --format=%ct)
+
           NOW=$(date +%s)
+
           DIFF=$(( (NOW - LAST_COMMIT) / 86400 ))  # 秒转天数
+
           echo "Days since last commit: $DIFF"
 
           if [ $DIFF -ge 15 ]; then
@@ -84,3 +87,4 @@ jobs:
             git push
           else
             echo "No keep-alive commit needed"
+          fi
