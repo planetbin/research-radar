@@ -6,6 +6,7 @@ on:
   workflow_dispatch:
 
 jobs:
+
   run-paperbot:
     runs-on: ubuntu-latest
 
@@ -57,3 +58,29 @@ jobs:
         with:
           path: papers.db
           key: paper-db-${{ runner.os }}-${{ github.run_id }}
+
+  keep-alive:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Create empty commit if 15 days passed
+        run: |
+          # 获取上一次提交时间戳
+          LAST_COMMIT=$(git log -1 --format=%ct)
+          NOW=$(date +%s)
+          DIFF=$(( (NOW - LAST_COMMIT) / 86400 ))  # 秒转天数
+          echo "Days since last commit: $DIFF"
+
+          if [ $DIFF -ge 15 ]; then
+            git commit --allow-empty -m "keep schedule alive $(date -u)"
+            git push
+          else
+            echo "No keep-alive commit needed"
