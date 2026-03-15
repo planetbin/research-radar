@@ -20,7 +20,7 @@ RECIPIENTS = os.getenv("RECIPIENTS", "").split(",")
 SMTP_SERVER = os.getenv("SMTP_SERVER", "smtp.gmail.com")
 SMTP_PORT = int(os.getenv("SMTP_PORT", 587))
 SEARCH_TOPIC = os.getenv("SEARCH_TOPIC", "cognitive bias")
-DISABLE_DEDUP = True
+DISABLE_DEDUP = False
 
 # ======================
 # 数据库
