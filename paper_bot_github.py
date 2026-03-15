@@ -26,8 +26,7 @@ SMTP_PORT = int(os.getenv("SMTP_PORT", 587))
 
 SEARCH_TOPIC = os.getenv("SEARCH_TOPIC", "cognitive bias")
 
-# 去重开关（True=关闭去重，False=开启去重）
-DISABLE_DEDUP = False
+DISABLE_DEDUP = TRUE
 
 
 # ======================
@@ -106,7 +105,7 @@ def fetch_pubmed():
 
 
 # ======================
-# arXiv抓取（24小时过滤）
+# arXiv抓取
 # ======================
 
 def fetch_arxiv():
@@ -149,7 +148,7 @@ def fetch_arxiv():
 
 
 # ======================
-# 数据库存储 + 去重
+# 数据库存储
 # ======================
 
 def save_papers(papers):
@@ -182,16 +181,16 @@ def save_papers(papers):
 
 
 # ======================
-# AI摘要
+# AI理解（评分+摘要一次完成）
 # ======================
 
-def summarize_paper(title, abstract):
+def analyze_paper(title, abstract):
 
     if not DEEPSEEK_API_KEY:
-        return "未配置 DeepSeek API Key"
+        return 5, "未配置API Key"
 
     prompt = f"""
-请用中文总结下面论文：
+请分析下面论文：
 
 标题：
 {title}
@@ -199,11 +198,64 @@ def summarize_paper(title, abstract):
 摘要：
 {abstract}
 
-输出三行：
+输出格式：
 
-研究问题：
-核心发现：
-研究方法：
+评分: 1-10
+
+研究问题:
+核心发现:
+研究方法:
+"""
+
+    url = "https://api.deepseek.com/v1/chat/completions"
+
+    headers = {
+        "Authorization": f"Bearer {DEEPSEEK_API_KEY}",
+        "Content-Type": "application/json"
+    }
+
+    data = {
+        "model": "deepseek-chat",
+        "messages": [{"role": "user", "content": prompt}]
+    }
+
+    r = requests.post(url, headers=headers, json=data)
+
+    result = r.json()
+
+    text = result["choices"][0]["message"]["content"]
+
+    try:
+        score = int(text.split("评分")[1].split("\n")[0].replace(":", "").strip())
+    except:
+        score = 5
+
+    return score, text
+
+
+# ======================
+# AI趋势综述
+# ======================
+
+def summarize_trends(papers):
+
+    if not papers or not DEEPSEEK_API_KEY:
+        return ""
+
+    abstracts = "\n\n".join([p["abstract"] for p in papers[:20]])
+
+    prompt = f"""
+下面是最近论文摘要：
+
+{abstracts}
+
+请总结：
+
+1 当前研究热点
+2 常见研究方法
+3 未来方向
+
+150字以内中文。
 """
 
     url = "https://api.deepseek.com/v1/chat/completions"
@@ -264,7 +316,7 @@ def trend_analysis():
 
 
 # ======================
-# 发送邮件
+# 邮件
 # ======================
 
 def send_email(report, trend_file):
@@ -337,10 +389,25 @@ def main():
 
         for p in new_papers:
 
-            summary = summarize_paper(p["title"], p["abstract"])
+            score, summary = analyze_paper(p["title"], p["abstract"])
 
+            p["score"] = score
+            p["summary"] = summary
+
+        new_papers = sorted(new_papers, key=lambda x: x["score"], reverse=True)
+
+        trend_summary = summarize_trends(new_papers)
+
+        report += "今日研究趋势综述\n"
+        report += trend_summary + "\n\n"
+        report += "========================\n\n"
+
+        for p in new_papers:
+
+            report += f"评分：{p['score']}/10\n"
             report += f"论文：{p['title']}\n\n"
-            report += summary + "\n\n"
+
+            report += p["summary"] + "\n\n"
 
             if p["source"] == "pubmed":
                 link = f"https://pubmed.ncbi.nlm.nih.gov/{p['id']}"
