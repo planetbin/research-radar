@@ -2,7 +2,7 @@ name: Paper Bot
 
 on:
   schedule:
-    - cron: '0 * * * *'   # 每小时运行一次（防止 GitHub schedule 漏触发）
+    - cron: '0 */4 * * *'   # 每4小时整点触发，UTC时间
   workflow_dispatch:
 
 jobs:
